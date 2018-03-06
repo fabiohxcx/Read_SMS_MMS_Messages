@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -16,10 +17,13 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int GET_MY_PERMISSION = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,8 +40,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        int GET_MY_PERMISSION = 1;
-
         if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
             Log.d("fabio-mms", "if1");
 
@@ -46,64 +48,82 @@ public class MainActivity extends AppCompatActivity {
             /* do nothing*/
             } else {
                 Log.d("fabio", "else2");
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{"android.permission.READ_SMS"}, GET_MY_PERMISSION);
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{"android.permission.READ_SMS", android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, GET_MY_PERMISSION);
             }
         } else {
 
-            ContentResolver contentResolver = getContentResolver();
-            final String[] projection = new String[]{"*"};
-            Uri uri = Uri.parse("content://mms-sms/conversations/");
-            Cursor cursor = contentResolver.query(uri, projection, null, null, null);
-
-            ArrayList<SmsModel> array = new ArrayList();
-
-            while (cursor.moveToNext()) {
-
-                SmsModel smsModel = new SmsModel();
-
-                smsModel.id = cursor.getInt(cursor.getColumnIndex("_id"));
-                Log.d("fabio-mms-while", String.valueOf(smsModel.id));
-                smsModel.number = cursor.getString(cursor.getColumnIndex("address"));
-                smsModel.data = cursor.getLong(cursor.getColumnIndex("date"));
-                smsModel.threadId = cursor.getInt(cursor.getColumnIndex("thread_id"));
-
-                String string = cursor.getString(cursor.getColumnIndex("ct_t"));
-
-                if ("application/vnd.wap.multipart.related".equals(string)) {
-                    // it's MMS
-                    smsModel.type = "mms";
-                } else {
-                    // it's SMS
-                    smsModel.type = "sms";
-                }
-                array.add(smsModel);
-            }
-
-            ListSMSAdapter adapter = new ListSMSAdapter(this, array);
-
-            ListView listView = (ListView) findViewById(R.id.listview_main);
-
-            listView.setAdapter(adapter);
-
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-
-                    Intent intent = new Intent(MainActivity.this, SMSMMSDetailActivity.class);
-                    String threadId = ((TextView) view.findViewById(R.id.tv_thread_id)).getText().toString();
-                    String type = ((TextView) view.findViewById(R.id.tv_type)).getText().toString();
-                    intent.putExtra("thread_id", threadId);
-                    intent.putExtra("type", type);
-                    startActivity(intent);
-
-                }
-            });
-
-            cursor.close();
+            getMessages();
 
         }
 
     } //onCreate
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case GET_MY_PERMISSION: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    getMessages();
+                } else {
+                    Toast.makeText(this, "Permission denied", Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+    }
+
+    private void getMessages() {
+        ContentResolver contentResolver = getContentResolver();
+        final String[] projection = new String[]{"*"};
+        Uri uri = Uri.parse("content://mms-sms/conversations/");
+        Cursor cursor = contentResolver.query(uri, projection, null, null, null);
+
+        ArrayList<SmsModel> array = new ArrayList();
+
+        while (cursor.moveToNext()) {
+
+            SmsModel smsModel = new SmsModel();
+
+            smsModel.id = cursor.getInt(cursor.getColumnIndex("_id"));
+            Log.d("fabio-mms-while", String.valueOf(smsModel.id));
+            smsModel.number = cursor.getString(cursor.getColumnIndex("address"));
+            smsModel.data = cursor.getLong(cursor.getColumnIndex("date"));
+            smsModel.threadId = cursor.getInt(cursor.getColumnIndex("thread_id"));
+
+            String string = cursor.getString(cursor.getColumnIndex("ct_t"));
+
+            if ("application/vnd.wap.multipart.related".equals(string)) {
+                // it's MMS
+                smsModel.type = "mms";
+            } else {
+                // it's SMS
+                smsModel.type = "sms";
+            }
+            array.add(smsModel);
+        }
+
+        ListSMSAdapter adapter = new ListSMSAdapter(this, array);
+
+        ListView listView = (ListView) findViewById(R.id.listview_main);
+
+        listView.setAdapter(adapter);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+
+                Intent intent = new Intent(MainActivity.this, SMSMMSDetailActivity.class);
+                String threadId = ((TextView) view.findViewById(R.id.tv_thread_id)).getText().toString();
+                String type = ((TextView) view.findViewById(R.id.tv_type)).getText().toString();
+                intent.putExtra("thread_id", threadId);
+                intent.putExtra("type", type);
+                startActivity(intent);
+
+            }
+        });
+
+        cursor.close();
+    }
 
 
 }

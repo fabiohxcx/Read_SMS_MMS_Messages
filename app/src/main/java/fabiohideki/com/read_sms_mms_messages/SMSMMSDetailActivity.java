@@ -1,17 +1,28 @@
 package fabiohideki.com.read_sms_mms_messages;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.database.Cursor;
 import android.icu.text.MessageFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 public class SMSMMSDetailActivity extends AppCompatActivity {
+
+    private TextView textViewDetail;
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
@@ -38,7 +49,7 @@ public class SMSMMSDetailActivity extends AppCompatActivity {
         textViewType.setText(type);
 
 
-        TextView textViewDetail = (TextView) findViewById(R.id.tv_detail_column);
+        textViewDetail = (TextView) findViewById(R.id.tv_detail_column);
 
         if (("mms").equals(type)) {
 
@@ -79,6 +90,7 @@ public class SMSMMSDetailActivity extends AppCompatActivity {
             }
             cursor.close();
 
+
             textViewDetail.setText(textBuilder.toString());
             Log.d("fabio-log", textBuilder.toString());
 
@@ -107,6 +119,51 @@ public class SMSMMSDetailActivity extends AppCompatActivity {
         }
 
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+
+        menu.add("Export");
+
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        String name = item.getTitle().toString();
+
+        if (name.equals("Export")) {
+            Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
+
+            generateNoteOnSD(this, "sms_mms.txt", textViewDetail.getText().toString());
+
+
+        }
+
+
+        return super.onOptionsItemSelected(item);
+
+
+    }
+
+    public void generateNoteOnSD(Context context, String sFileName, String sBody) {
+        try {
+            File root = new File(Environment.getExternalStorageDirectory(), "");
+            if (!root.exists()) {
+                root.mkdirs();
+            }
+            File gpxfile = new File(root, sFileName);
+            FileWriter writer = new FileWriter(gpxfile);
+            writer.append(sBody);
+            writer.flush();
+            writer.close();
+            Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
